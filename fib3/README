@@ -1,0 +1,115 @@
+Bluespec Fibonacci Lab Three
+
+
+EXERCISES
+
+1. Implement the Fibonacci circuit in FibThree.bsv.  A module outline (in
+   FibThree.bsv) and a testbench (in FibThreeTb.bsv) have been provided for
+   you.
+
+   The Fib interface has changed slightly: the getReply() method now requires
+   the caller to acknowledge that it is consuming the value, and getReply()'s
+   return type becomes ActionValue#(int).
+
+   The code should implement a double-issue Fib circuit, and contain, for each
+   of the two execution units, four registers:
+     - a register storing the current Fibonacci value
+     - a register indicating whether there is an unread answer there
+     - a register storing the next Fibonacci value
+     - a register for the count-down counter
+
+   The circuit should also contain two FIFOs (see cheat-sheet below for syntax)
+   to buffer requests and responses.
+
+   Conceptually, each fib execution unit can be divided into three stages:
+     - load registers with request from request FIFO
+     - compute the Fibonacci sequence until the count has reached 0
+     - commit reply from registers to replies FIFO
+   Each stage is independent and can be implemented as a separate rule;
+   remember to have two sets of rules to handle both execution units.
+
+   You should have two rules (one per execution unit) reading the request FIFO,
+   and two rules writing the reply FIFO.  What if both rules can fire, and
+   contend for the relevant FIFO port?  Does the compiler hint about this?
+
+2. Compile the circuit to create a C-based simulator (Bluesim):
+
+        make build
+        make link
+
+   Then run the resulting executable for 575 clock cycles:
+
+        ./mkFibThreeTb -m 575
+
+   and compare the output with the expected results in the file
+   mkFibThreeTb.out.expected.
+
+3. Produce a VCD file from the C-based simulator:
+
+   	./mkFibThreeTb -m 575 -V
+
+   Examine the WILL_FIRE signals for the two loading rules.  What happens when
+   both rules can fire (see CAN_FIRE signals) at the same time?  Is it what you
+   expected?
+   
+   Also note that getReply() now features an enable signal for its Action
+   component.
+
+4. Compile the circuit to Verilog:
+
+	make build SIM=verilog
+
+   Examine the Verilog file mkFibThree.v.  Note the WILL_FIRE signals for the
+   two load rules: how do their definitions differ?  How does that relate to
+   the compiler warning and what you saw in the VCD?
+
+5. Further exploration (optional)
+
+   In this naive implementation, the Fibonacci numbers complete in request
+   order because each consecutive request takes more time.  If the testbench
+   made non-increasing requests, the replies could appear out of order with
+   respect to the requests.  What else do you need to keep track of to address
+   this?
+
+
+
+
+SYNTAX CHEAT-SHEET
+
+1. Import the FIFO library at top of file:
+
+     import FIFO::*;
+
+2. Instantiating a FIFO containing ints inside a module:
+
+     FIFO#(int) fifoName <- mkFIFO();
+
+3. Instantiating a five-deep FIFO of ints inside a module:
+
+     FIFO#(int) fifoName <- mkSizedFIFO(5);
+
+4. The FIFO interface (from FIFO library):
+
+     interface FIFO#(int);
+       method Action enq(int value);
+       method int first();
+       method Action deq();
+     endinterface: FIFO
+
+5. Instantiating a register containing a Bool:
+
+     Reg#(Bool) regName <- mkReg(True);  // Bool = True or False
+
+6. Implementing an ActionValue method inside a module:
+   (note that ActionValue method cannot take arguments.)
+
+     method ActionValue#(returnType) methodName()
+                                                          if (expression);
+       actionvalue
+         ... <actions> ...
+	 return ... <expression> ...
+       endactionvalue
+     endmethod
+
+(see also syntax cheat-sheets for FibOne and FibTwo)
+

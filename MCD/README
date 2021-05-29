@@ -1,0 +1,51 @@
+A simple FIFO switch has two inputs and one output and might be described
+by the following interface:
+
+interface Switch#(type t);
+  method Action enq_a(t x); 
+  method Action enq_b(t x); 
+  method Action deq(); 
+  method t first(); 
+  method Action flip(); 
+endinterface
+
+The idea is that values can be enqueued on either port, and the internal
+state of the switch determines which port is allowed to send values to
+the output side (where they can be retrieved with deq and first). That 
+internal state can be toggled by calling the flip method.
+
+1. Write the implementation of mkSwitch (a FIFO switch for values of type
+Bit#(32)). Assume that the internal switch starts out forwarding values from
+the a port to the output.
+
+2. Test your implementation of mkSwitch using the provided testbench,
+TestSwitch.bsv. What is the output and is it what you expected?
+
+3. An multi-clock domain switch can have the same interface as your 
+original FIFO switch, but takes extra parameters for the relevant clock 
+and reset signals:
+
+module mkMCDSwitch(Clock clk_a, Reset rstn_a, Clock clk_b, Reset rstn_b, 
+                   Clock clk_out, Switch#(Bit#(32)) ifc);
+
+In this case, there is a separate clock for the a and b ports as well as 
+the output side (for the deq and first methods). The flip method is clocked
+by the default clock of the module.
+
+Modify your FIFO switch implementation (using MCD features, including
+synchronizers) to implement the MCD switch described above in a file
+called MCDSwitch.bsv
+
+4. Modify the testbench TestSwitch.bsv to test the functionality of your
+multi-clock switch, creating a new testbench MCDTestSwitch.bsv.  In this 
+testbench, supply a unique clock for each of the 4 clocks of the
+MCD switch (a port, b port, flip, deq and first clock). 
+
+Connect it to your MCD switch implementation and observe the output. Does
+it behave the way you expect?
+
+
+
+ 
+
+

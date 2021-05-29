@@ -1,0 +1,97 @@
+Bluespec Fibonacci Lab Two
+
+
+EXERCISES
+
+1. Implement the Fibonacci circuit in FibTwo.bsv.  A module outline (in
+   FibTwo.bsv) and a testbench (in FibTwoTb.bsv) have been provided for you.
+
+   The circuit, like FibOn, should contain two registers, starting at 0 and 1,
+   and a rule to compute fib(n).  The new bits are the interface methods,
+   putRequest() and getReply(), which allow the module to communicate with the
+   outside world.  Make sure that the methods 
+
+   You will find a syntax cheat-sheet at the end of this file.
+
+
+2. Compile and link the circuit to create a C-based simulator (Bluesim):
+
+        make build
+        make link
+
+   Then run the resulting executable for 1050 clock cycles:
+
+        ./mkFibTwoTb -m 1050
+
+   and compare the output with the expected results in the file
+   mkFibTwoTb.out.expected.  (Why does it take 1050 cycles to produce
+   what took 45 cycles in FibOne?)
+
+
+3. Produce a VCD file from the C-based simulator:
+
+   	./mkFibTwoTb -m 1050 -V
+
+   Open the VCD in your favorite waveform viewer and examine the signals.
+   Note, in addition to the WILL_FIRE_ruleName signals previously mentioned in
+   FibOne, a RDY_methodName signal for each method, and an EN_methodName signal
+   for each Action-method.
+
+   Examine the WILL_FIRE signals for the rules and EN signals for the methods.
+   Does each method/rule fire when you expect?
+
+
+4. Compile the circuit to Verilog:
+
+	make build SIM=<simulator>
+
+   Examine the Verilog file mkFibTwo.v.  Note:
+
+     - how the methods are represented in the port list
+     - how the method RDY_ signals are implemented
+     - what the method EN_ signals control
+     - what the enable and data signals for the registers are
+
+   Examine the Verilog file mkFibTwoTb.v.  Note:
+   
+     - how the device under test, mkFibTwo, is instantiated and connected
+     - how the RDY_ signals from mkFibTwo's methods are used
+     - how the EN_ signal to mkFibTwo's putRequest() method is connected
+
+
+SYNTAX CHEAT-SHEET
+
+1. Interface declaration:
+
+     interface IfcName;
+       // value method
+       method resultType methodName(argType argName, ...);
+       // action method
+       method Action methodName(argType argName, ...);
+       // actionvalue method
+       method ActionValue#(resultType) methodName(argType argName, ...);
+     endinterface: IfcName
+
+2. Implementing a value-method inside a module:
+
+     method returnType methodName(argType argName, ...);
+       ... <computations> ...
+       return ... <expression> ...
+     endmethod: methodName
+
+3. Implementing an action-method inside a module:
+
+     method Action methodName(argType argName, ...);
+       action
+         ... <actions> ...
+       endaction
+     endmethod: methodName
+
+4. Implementing a method with implicit conditions inside a module:
+
+     method returnType methodName(argType argName, ...) if (expression);
+       ...
+     endmethod
+
+(see also syntax cheat-sheet for FibOne)
+

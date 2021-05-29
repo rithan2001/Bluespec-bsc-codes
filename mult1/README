@@ -1,0 +1,88 @@
+Bluespec Multiplier Lab One
+
+
+TASKS
+
+1. This is a version of the multiplier design with a separate testbench.  Use
+   whichever of the techniques you prefer from the previous Lab to examine and
+   test this design.
+
+   You will find a syntax cheat-sheet at the end of this file.
+
+   You can say    'make help'    to see available make targets
+
+2. As before, arrange that the simulation terminates when it has displayed all
+   the results.  This time, though, do so by adding another rule to the
+   testbench to invoke "$finish(0)" at the appropriate moment.
+
+
+3. As written, the design of the dut does not ensure that a result has been
+   read before the next calculation is allowed to begin.  Amend the design to
+   provide for this.  Do so by adding a third method to the interface
+   definition (in Mult.bsv): 
+
+      method Action acknowledge();
+
+   Place a call of this method at the appropriate place in the testbench
+   (Mult1Tb.bsv).  Implement the method in the dut (Mult1.bsv): add an extra
+   register, "available", with contents of type Bool, and arrange that the
+   appropriate methods set it to True and False respectively.
+
+4. (Optional)  Make the following improvement to the architecture of the dut.
+   We can economize on registers by storing the mplr value in the lower half
+   of the product register.  Then, instead of adding mcand into the lower end
+   of the product and shifting mcand left after each iteration, we add it into
+   the upper end of the product and shift the product to the right after each
+   iteration.  This means that mcand need no longer be a double-length
+   register; and the single right-shift of the product register places both
+   mplr and the partial result into their new positions.  Implement and test
+   this micro-architecture change.
+
+
+SYNTAX CHEAT-SHEET
+
+1. Interface declaration:
+
+     interface IfcName;
+       // value method
+       method resultType methodName(argType argName, ...);
+       // action method
+       method Action methodName(argType argName, ...);
+       // actionvalue method
+       method ActionValue#(resultType) methodName(argType argName, ...);
+     endinterface: IfcName
+
+2. Implementing a value-method inside a module:
+
+     method returnType methodName(argType argName, ...);
+       ... <computations> ...
+       return ... <expression> ...
+     endmethod: methodName
+
+3. Implementing an action-method inside a module:
+
+     method Action methodName(argType argName, ...);
+       action
+         ... <actions> ...
+       endaction
+     endmethod: methodName
+
+4. Implementing a method with implicit conditions inside a module:
+
+     method returnType methodName(argType argName, ...) if (expression);
+       ...
+     endmethod
+
+5. Importing a package within another:
+
+     import <packagename>::*;
+
+   Note: the "*" indicates that all the definitions in <packagename> are to be
+   imported; we do not support selective importing.
+
+6. Instantiating a register containing a Bool:
+
+     Reg#(Bool) regName <- mkReg(True);  // Bool = True or False
+
+(see also syntax cheat-sheet for Mult0)
+

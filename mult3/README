@@ -1,0 +1,201 @@
+Bluespec Multiplier Lab Three
+
+INTRODUCTION
+
+This is a considerably more complicated design than any of the previous ones,
+and uses some of BSV's more advanced features.  However, the tasks you are
+asked to do are quite self-contained, and do not require familiarity with all
+the advanced stuff.  So we suggest you approach this lab at two levels.  For
+the tasks themselves you will have to understand what you are doing, and the
+syntax involved, in detail; but we suggest you also look at the rest of the
+design to understand in general terms how it is put together, but not trying
+to learn all the syntactic and other details -- they are all described in the
+documentation, and will be there for you to study (maybe loooking at this
+example again) if you need to use them later.
+
+SERVER FARMS
+
+A server farm is a set of identical servers, which can each perform the same
+task, together with a controller.  The controller allocates incoming tasks to
+any server which happens to be available (free), and sends results back to its
+caller.  This design includes two server farms, one for each of the two
+multiplication modules (mkMult1 and mkMult2) of the previous two labs.  The
+testbench sends identical random tasks to each farm, and checks to see whether
+corresponding results returned from each are the same.
+
+For both kinds of server, the time needed to complete each task depends on the
+value of the multiplier argument; there is therefore no guarantee that results
+will become available in the order the tasks were started.  It is required,
+however, that the controller return results to its caller in the order the
+tasks were received.  The controller accordingly must instantiate a special
+mechanism for this purpose.  Fortunately, the appropriate mechanism is
+available in a library package.
+
+COMPLETION BUFFERS
+
+The CompletionBuffer package may be imported from the library.  The
+CompletionBuffer interface provides three methods.  The "reserve" method
+allows the caller to reserve a slot in the buffer; the method returns a token
+holding the identity of the slot.  When a task completes, the result may be
+stored in the buffer using the "complete" method; this takes a pair of values
+as its argument -- the token identifying its slot, and the result itself.
+Finally, results may be retrieved from the buffer using the "drain" method,
+which returns results in the order in which the tokens were originally
+allocated; thus the results of quick tasks might have to wait in the buffer
+while a lengthy task ahead of them completes.
+
+The type of the interface is as follows.
+
+    interface CompletionBuffer #(type n, type a);
+        interface Get#(CBToken#(n)) reserve();
+        interface Put#(Tuple2 #(CBToken#(n), a)) complete();
+        interface Get#(a) drain();
+    endinterface: CompletionBuffer
+
+Each methods is actually in its own sub-interface -- a Get interface for those
+which get information from the buffer, and a Put interface for the one which
+sends information to the buffer.  The Get and Put interfaces are described in
+a lecture, and are available in the GetPut library package.  Note that the
+type of the items to be stored, "a", is a type argument for this definition,
+and so is the required size of the buffer, "n".  "n" is also a type argument
+for "CBToken", the type for the tokens issued.  This allows the type-checking
+phase of the synthesis to ensure that the tokens are the appropriate size for
+the buffer, and that all the buffer's internal registers are of the correct
+sizes too.
+
+The 'mkCompletionBuffer" module may be used to instantiate a completion
+buffer.  It takes no size arguments, as all that information is already
+contained in the type of the interface it is being asked to produce.  A
+typical instantiation is:
+
+    CompletionBuffer#(17, nat) cb <- mkCompletionBuffer;
+
+which instantiates a buffer of size 17 to hold items of type "nat",  Then a
+token may be claimed from this buffer by
+
+    CBToken#(17) t <- cb.reserve.get();
+
+or, more succinctly, by
+
+    let t <- cb.reserve.get();
+
+(there is no need to give the type of "t" explicitly -- the tool can work it
+out for itself).  Here, "reserve" is the name of one of "cb"'s sub-interfaces,
+and "get" is the name of the method of that sub-interface.  A result "res" may
+be stored in the buffer by the call
+
+    cb.complete.put(tuple2(t, res));
+
+THE Mult3 DESIGN
+
+Note that the versions of Mult1 and Mult2 used in this design use the
+"ActionValue" form of the "Mult_IFC" interface, as produced by you during the
+previous lab.
+
+The modules "mkMult1Farm" and "mkMult2Farm" instantiate the two farms.  Each
+declares and instantiates an array of servers, and passes it as an argument to
+the "mkFarm" module, which instantiates the control mechanism.  "mkFarm"
+accepts the array of server interfaces (we actually use the word "List" for
+the type of an array).  It constructs a FIFO to hold the input queue, and a
+completion buffer for results.  It constructs an array of Boolean registers to
+tell which servers are free, and an array of token registers to hold the
+tokens for tasks in progress.  Then, in a loop (executed at synthesis time),
+it instantiates the elements of the array, and declares a pair of rules to
+handle each server in the list.  The start method of the controller itself
+merely enqueues incoming tasks on the fifo; its end method is simply the
+"drain" method of the completion buffer.
+
+THE TESTBENCH Mult3Tb
+
+The testbench instantiates the two farms, and sends identical tasks to each.
+Each task, however, requires two random numbers, and the random number
+generator provides a stream of numbers one at a time.  A convenient way of
+handling this predicament is to split the stream into a pair of fifos, with
+rules to keep each fifo topped up; then the rule which starts a task can take
+one element from each fifo.
+
+The random number generator is in a separate package.  For any who are
+interested, its design is described in internal comments.
+
+
+ADVANCED FEATURES USED IN THIS DESIGN
+
+The following is a checklist of some of the advanced features used in this
+design.
+
+1. Passing complex types (arrays of interfaces) as arguments to modules.
+
+2. Rules generated inside synthesis-time loops.
+
+3. Multiple rules (even loop-generated ones) manipulating the same resource
+   (the same completion buffer and the same input fifo), relying on the tool
+   to provide all the control logic.
+
+4. Polymorphic modules: for example, mkCompletionBuffer constructs completion
+   buffers for any type of item (provided it can be stored as bits) and any
+   size of buffer.  The type-checker ensures that each particular
+   instantiation of mkCompletionBuffer uses tokens of the appropriate size.
+
+5. Definition of an interface method as one of the methods of an internal
+   module (e.g. the "result" method of "mkFarm").
+
+6. The use of previously prepared and verified library packages.
+
+
+TASKS
+
+1. Complete the bodies of the two incomplete methods in mkFarm (the one which
+   processes the end of a server task, retrieving the result and sending it,
+   along with the token, to the completion buffer; and the one which accepts
+   new tasks from the farm's caller and enqueues them on the input fifo).
+   Test and debug the completed design.
+
+2. Synthesizing this design results in lots of warning messages about rule
+   conflicts.  These do not actually matter (after all, if several servers are
+   free id doesn't really matter which one gets the job); but it is often
+   thought good practice to eliminate warnings.  Examine these warnings, and
+   understand how they arise.  Eliminate at least some of them.  [Advanced
+   optional task: suggest to the Bluespec Development Team the appropriate
+   extension to the BSV notation to facilitate elimination of the rest.]
+
+3. Amend the testbench so that it no longer displays arguments as tasks are
+   dispatched, but instead displays the arguments alongside their results.
+   For this, instantiate a fifo of the appropriate size, to hold pairs of
+   arguments.  The start_task rule should of course enqueue each pair in this
+   fifo, and the end_task rule retrive them for display.
+
+SYNTAX CHEAT-SHEET
+
+1. Invoking a method of a sub-interface (see the CompletionBuffer example
+   above).
+
+2. Instantiating a FIFO containing ints inside a module:
+
+     FIFO#(int) fifoName <- mkFIFO();
+
+3. Instantiating a five-deep FIFO of ints inside a module:
+
+     FIFO#(int) fifoName <- mkSizedFIFO(5);
+
+4. The FIFO interface (from FIFO library):
+
+     interface FIFO#(int);
+       method Action enq(int value);
+       method int    first();
+       method Action deq();
+       method Action clear() ;
+     endinterface: FIFO
+
+5. As a convention, we recommend an alternative syntax for defining modules
+   with port-like arguments (e.g. the list of interfaces for mkFarm).  The
+   original syntax
+      module mkFarm#(module#(Mult_IFC) mkM) (Mult_IFC);
+   continues to work; but it is preferable to move the port-like argument into
+   the second argument list:
+      module mkFarm(module#(Mult_IFC) mkM, Mult_IFC ifc);
+   The meaning is exactly the same: any extra elements in the second list are
+   treated as if they are appended onto the end of the first list.  Note that
+   in the alternative syntax, the final element (the interface provided by the
+   module) must have an identifier as well as the type.
+
+(see also syntax cheat-sheets for previous labs)

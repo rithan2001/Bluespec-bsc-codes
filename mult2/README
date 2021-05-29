@@ -1,0 +1,92 @@
+Bluespec Multiplier Lab Two
+
+BOOTH MULTIPLICATION
+
+This is a technique for speeding up naive multiplication by a constant factor,
+based on the fact that shifting is quicker than adding (or subtracting).  The
+key observation is the following.  A run of consecutive 1s in a binary number
+
+               m...   n... 210
+    00000000000011111110000000
+
+is equal to (2^m - 2^n).  We use this to construct a "Booth encoding" of the
+multiplier, considering one or more bits at a time.  We'll actually be using a
+two-bit encoding, but let's consider the one-bit encoding first as a simpler
+example.  Whenever we consider a bit we also look at the bit to its right.
+The encoding is as follows
+
+   The_bit  Adj_bit                       Contribution
+
+      0        0    zero on its own:            0
+      0        1    high end of a run of ones:  1
+      1        0    low end of a run of ones:  -1
+      1        1    middle of a run of ones:    0
+
+The actual contribution to the value is of course the value shown times 2^n,
+where n is its bit-position.
+
+The two-bit version is as follows (here the value will be multiplied by 2^n
+where n is the position of the less significant bit).
+
+   The_bits  Adj_bit                             Contribution
+
+      00        0    zero on its own:                  0
+      00        1    high end of a run of ones:        1
+      01        0    an isolated one:                  1
+      01        1    high end of a run of ones:        2
+      10        0    low end of a run of ones:        -2
+      10        1    end of a run, start of another:  -1 (i.e. -2 + 1)
+      11        0    low end of a run of ones:        -1
+      11        1    middle of a run of ones:          0
+
+When each pair of bits is encoded in this way, its contribution to the partial
+product may be found by multiplying and adding the multiplicand by the
+appropriate factor (i.e. shifting and adding-or-subtracting).
+
+This encoding is done in the Mult2 design by the function "boothenc".  It
+takes two arguments: the first is a three-bit quantity (note that the least
+significant of these is the "adjacent bit" above).  The second argument will
+be the current value of the multiplier; the function produces the contribution
+of the two bits concerned to the partial product.  The "cycle" rule can thus
+deal with the bits of the multiplier two at a time.
+
+TASKS
+
+0. You can say    'make help'    to examine the available make targets
+
+1. Complete the "cycle" rule according to the description given above.
+
+2. Write the body of the "result" method.  Test and debug the completed
+   design. 
+
+3. (optional) 
+   Arrange for the result to be acknowledged, as in the previous lab.  Again
+   you will have to amend the interface definition, the dut and the testbench;
+   but this time, instead of adding an extra method, change the "result"
+   method to be of type "ActionValue(Tout)".  Then calling this method will
+   automatically acknowledge its receipt, and the body of the method should
+   record the acknowledgment accordingly.
+
+
+SYNTAX CHEAT-SHEET
+
+1. Implementing an ActionValue method inside a module:
+   (note that ActionValue method cannot take arguments.)
+
+     method ActionValue#(returnType) methodName()
+                                                          if (expression);
+       actionvalue
+         ... <actions> ...
+	 return ... <expression> ...
+       endactionvalue
+     endmethod
+
+2. Invoking an Actionvalue method inside a rule (or inside another method):
+
+     variableName <- interfaceName.methodName();
+   or
+     typeName variableName <- interfaceName.methodName();
+   or
+     let variableName <- interfaceName.methodName();
+
+(see also syntax cheat-sheets for Mult0 and Mult1)

@@ -1,0 +1,108 @@
+Bluespec Fibonacci Lab One
+
+
+EXERCISES
+
+1. Implement the Fibonacci circuit in FibOne.bsv.  A module outline has been
+   provided for you.
+
+   The circuit should contain two registers, starting at 0 and 1, and a rule to
+   set them so that, on the n'th clock cycle, one of the registers contains
+   fib(n).
+
+   You will find a syntax cheat-sheet at the end of this file.
+
+
+2. Compile the circuit to Verilog:
+
+	make build SIM=iverilog
+
+   This example shows simulating to iverilog.  The Makefile supports several 
+   common simulators, where the default simulator is Bluesim. To use another 
+   simulator one can specify the simulator: SIM=<simulator>
+
+   where <simulator> is one of vcs, vcsi ncverilog, veriwell, or cver.
+
+   To see all the makefile options, type:
+     
+        make help
+
+   Examine the Verilog file.  Note:
+
+     - the CLK and RST_N (active-low reset) signals introduced by bsc
+     - register instantiations
+     - assignments to register inputs (...$D_IN)
+     - assignments to register enables (...$EN)
+
+
+3. Produce a VCD file from the Verilog-based simulator:
+
+   	make run SIM=<simulator>
+  
+   Open the VCD in your favorite waveform viewer and examine the signals.  Note
+   instantiation hierarchy and the enables and outputs of the registers.  Also
+   note the rule firing signal(s), WILL_FIRE_RL_rulename.
+
+4. Compile the circuit to Bluesim:
+        
+        make build
+
+   Link the circuit:
+        
+        make link
+
+   Then run the resulting executable for forty-five clock cycles:
+
+       ./mkFibOne -m 45
+ 
+   and compare the output with the expected results in the file
+   mkFibOne.out.expected.  You may examine the full range of options
+   offered by the simulator:
+
+        ./mkFibOne -h
+
+
+SYNTAX CHEAT-SHEET
+
+1. Comments:
+
+     // line comment
+     /* block comment */
+
+2. Declaring a module:
+
+     (* synthesize *)
+     module moduleName();
+       ... <module contents> ...
+     endmodule: moduleName     // ": moduleName" optional
+
+   The (* synthesize *) attribute ensures that moduleName will be compiled into
+   a separate Verilog module (it would be inlined otherwise).
+
+3. Instantiating a register "r", containing type int (= 32-bit), and reset to
+   42, inside a module:
+
+     Reg#(int) r <- mkReg(42); // shortcut for register instantiation
+
+   alternately,
+
+     // long form of register instantiation
+     Reg#(int) r();            // instantiate interface; don't forget parens!
+     mkReg#(42) r_instance(r); // instantiate module and connect to interface
+
+4. Adding a rule to a module:
+
+     rule ruleName(predicate); // (predicate) may be omitted (= True)
+       ... <actions> ...
+     endrule: ruleName         // ": ruleName" optional
+
+5. Incrementing a register "r" in a rule:
+
+     r <= r + 1;               // right-hand-side can be any expression
+
+   (Note that "r = r + 1" will not work; why?)
+
+6. Displaying the value of a register "r" (formatted as decimal) in a rule:
+
+     $display("%d", r);        // %-formatting as in Verilog
+

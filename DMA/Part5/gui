@@ -1,0 +1,64 @@
+#!/bin/sh
+# \
+exec $BLUESPECDIR/bin/bluewish "$0" "$@"
+
+lappend auto_path .
+lappend auto_path $env(BLUESPECDIR)/tcllib/scemi
+lappend auto_path $env(BLUESPECDIR)/tcllib/workstation
+
+package require Bluetcl
+package require Waves
+package require BSDebug
+
+######################### OPTIONS #################
+# Where to find .bo files
+Bluetcl::flags set -p ../gen_dut:+
+
+# Select wave viewer  Gtk or Novas
+Waves::set_options viewer GtkWave
+# Waves::set_options viewer {Novas}
+Waves::set_options {GtkWave,Command} gtkx {GtkWave,Options} -W
+Waves::set_options {Novas,Command} {nWave}
+Waves::set_options {Novas,Options} {-nologo}
+
+
+# configurations
+fonts::initialize
+option add *Font        bscMenuFont
+
+
+######################### Starting Emulation #################
+
+## load and setup the software side of the scemi
+set paramFile mkBridge.params
+if { $::argc >= 1 } {
+    set paramFile [lindex $::argv 0]
+    puts "Using $paramFile"
+}
+if { ! [file readable $paramFile ]  } {
+    puts stderr "Error: Could not open $paramFile"
+     exit 1
+}
+if { [catch "bsdebug::scemi init $paramFile"  err ]} {
+  puts "Could not start scemi"
+  puts $err
+  exit 1
+}
+
+
+######################### Starting the GUI #################
+
+# source the local files
+source gui_top.tcl
+source gui_dut.tcl
+
+bsdebug::emu set verbose off
+
+# Run emulation window
+
+## Build the window.
+buildEmulationWin .
+
+
+
+

@@ -1,0 +1,94 @@
+[DEFAULT]
+default-targets:     bsim_dut bsim_tb
+bsc-compile-options: -keep-fires \
+                     -aggressive-conditions \
+                     -no-show-method-conf \
+                     -no-warn-action-shadowing
+bsc-link-options:    -keep-fires
+log-directory:         logs
+binary-directory:      obj
+simulation-directory:  bsim
+verilog-directory:     vlog
+info-directory:        info
+altera-directory:      quartus
+xilinx-directory:      xilinx
+design-editor-output-directory: vlog_mod
+design-editor-output-params:    mkBridge.params
+design-editor-edit-params
+design-editor-options:  --batch -bsvmodule mkBridge
+
+
+[dut]
+hide-target
+top-file:              Bridge.bsv
+top-module:            mkBridge
+exe-file:              dut
+
+[bsim_dut]
+extends-target: dut
+build-for:      bluesim
+scemi-type:     TCP
+scemi-tcp-port: 0
+exe-file:       dut
+
+[vlog_dut]
+extends-target: dut
+build-for:      verilog
+scemi-type:     TCP
+scemi-tcp-port: 0
+exe-file:       dut
+
+[ml605_dut]
+extends-target: dut
+xilinx-use-planahead
+build-for: ml605
+bsc-compile-options: -opt-undetermined-vals -unspecified-to 0
+scemi-type: PCIE_VIRTEX6
+run-design-editor
+
+[bsv_tb]
+hide-target
+scemi-tb
+top-file:             Tb.bsv
+exe-file:             tb
+
+[bsim_tb]
+extends-target: bsv_tb
+build-for:      bluesim
+
+[vlog_tb]
+extends-target: bsv_tb
+build-for:      verilog
+
+[tb]
+scemi-tb
+build-for: c++
+c++-header-targets: none
+c++-files: TclTb.cxx
+exe-file: tb
+
+[tcl_tb]
+extends-target: dut
+exe-file: cpp_tb
+build-for: c++
+scemi-tb
+uses-tcl
+c++-header-directory: generated_c
+c++-source-directory: .
+c++-header-aliases
+c++-options: -g -O0
+shared-lib: libbsdebug.so
+c++-files: TclTb.cxx DMATester.cxx $BLUESPECDIR/tcllib/include/bsdebug_common.cpp
+
+
+[ml605_tb]
+extends-target: dut
+build-for: c++
+scemi-tb
+uses-tcl
+c++-header-directory: generated_c
+c++-source-directory: .
+c++-files: TclTb.cxx DMATester.cxx $BLUESPECDIR/tcllib/include/bsdebug_common.cpp
+c++-header-aliases
+c++-options: -g -O0
+shared-lib: libbsdebug.so
